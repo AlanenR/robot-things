@@ -77,4 +77,6 @@ def hello_world():
     left_green_pwm.ChangeDutyCycle(0)
     left_blue_pwm.ChangeDutyCycle(0)
     right_red_pwm.ChangeDutyCycle(0)
+    right_green_pwm.ChangeDutyCycle(0)
+    right_blue_pwm.ChangeDutyCycle(0)
     return "<p>Knock knock.</p><p>Who’s there? </p><p>Art</p><p>Art who?</p><p>R2D2</p>"
