@@ -52,7 +52,7 @@ def hello_world():
     <head>
         <style>
             p {
-                color: #f5b81d
+                color: #f5b81d;
                 font-size: 18px;
             }
         </style>
