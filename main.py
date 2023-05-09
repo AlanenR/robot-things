@@ -5,6 +5,7 @@ from flask import Flask, request
 def shutDown():
     GPIO.cleanup()
 
+# EYES
 EYE_L_R = 22
 EYE_L_G = 27
 EYE_L_B = 17
@@ -34,14 +35,44 @@ right_red_pwm.start(0)
 right_green_pwm.start(0)
 right_blue_pwm.start(0)
 
+#MOTOR
+
+MOTOR = 26
+
+GPIO.setup(MOTOR, GPIO.OUT)
+
 app = Flask(__name__)
 
 
 @app.route("/")
 def hello_world():
 
+    html = """
+    <html>
+    <head>
+        <style>
+            p {
+                color: #f5b81d
+                font-size: 18px;
+            }
+        </style>
+    </head>
+    <body>
+        <p>Knock knock.</p>
+        <p>Who's there? </p>
+        <p>Art</p>
+        <p>Art who?</p>
+        <p>R2D2</p>
+    </body>
+    </html>
+    """
+
+    # EYES
     left_color = request.args.get("left", default="000000")
     right_color = request.args.get("right", default="000000")
+
+    # MOTOR
+    motor = request.args.get("motor", default="0")
 
     # Parse hex color strings to integers
     left_red = int(left_color[0:2], 16)
@@ -58,6 +89,9 @@ def hello_world():
     right_red_normalized = (right_red / 255.0) * 100
     right_green_normalized = (right_green / 255.0) * 100
     right_blue_normalized = (right_blue / 255.0) * 100
+
+    # Set motor
+    GPIO.output(MOTOR, int(motor))
 
     # Set PWM duty cycle for left eye
     left_red_pwm.ChangeDutyCycle(left_red_normalized)
@@ -79,4 +113,7 @@ def hello_world():
     right_red_pwm.ChangeDutyCycle(0)
     right_green_pwm.ChangeDutyCycle(0)
     right_blue_pwm.ChangeDutyCycle(0)
-    return "<p>Knock knock.</p><p>Who’s there? </p><p>Art</p><p>Art who?</p><p>R2D2</p>"
+
+    # Turn off motor
+    GPIO.output(MOTOR, GPIO.LOW)
+    return html
