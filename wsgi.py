@@ -1,6 +1,8 @@
 import time
+import re
 import RPi.GPIO as GPIO
 from flask import Flask, request
+import pyttsx3
 
 
 def shutDown():
@@ -58,14 +60,17 @@ def talk():
         </style>
     </head>
     <body>
-        <p>What should I do?</p>
+        <p>Make me speak</p>
     </body>
     </html>
     """
     if request.method == 'POST':
         content = request.get_json()
-        print(content.message)
-        
+        text = content["text"]
+        engine = pyttsx3.init()
+        engine.say(text)
+        engine.runAndWait()
+        return "done"
     else:
         return html
 
@@ -88,10 +93,11 @@ def motor():
     """
     if request.method == 'POST':
         content = request.get_json()
-        if(content.motor == 'on'):
+        if(content["motor"] == 'on'):
             GPIO.output(MOTOR, GPIO.HIGH)
-        elif(content.motor == 'off'):
+        elif(content["motor"] == 'off'):
             GPIO.output(MOTOR, GPIO.LOW)
+        return ""
     else:
         return html
 
@@ -119,8 +125,8 @@ def choosing_eyes_colors():
     """
     if request.method == 'POST':
         content = request.get_json()
-        left_color = content.left
-        right_color = content.right
+        left_color = content["left"]
+        right_color = content["right"]
         # Parse hex color strings to integers
         left_red = int(left_color[0:2], 16)
         left_green = int(left_color[2:4], 16)
@@ -146,6 +152,8 @@ def choosing_eyes_colors():
         right_red_pwm.ChangeDutyCycle(right_red_normalized)
         right_green_pwm.ChangeDutyCycle(right_green_normalized)
         right_blue_pwm.ChangeDutyCycle(right_blue_normalized)
+
+        return ""
 
     else:
         return html
