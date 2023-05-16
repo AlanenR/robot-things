@@ -2,8 +2,10 @@ import time
 import RPi.GPIO as GPIO
 from flask import Flask, request
 
+
 def shutDown():
     GPIO.cleanup()
+
 
 # EYES
 EYE_L_R = 22
@@ -35,13 +37,118 @@ right_red_pwm.start(0)
 right_green_pwm.start(0)
 right_blue_pwm.start(0)
 
-#MOTOR
+# MOTOR
 
 MOTOR = 26
 
 GPIO.setup(MOTOR, GPIO.OUT)
 
 app = Flask(__name__)
+
+@app.route("/talk", methods=['GET', 'POST'])
+def talk():
+    html = """
+    <html>
+    <head>
+        <style>
+            p {
+                color: #f5b81d;
+                font-size: 18px;
+            }
+        </style>
+    </head>
+    <body>
+        <p>What should I do?</p>
+    </body>
+    </html>
+    """
+    if request.method == 'POST':
+        content = request.get_json()
+        print(content.message)
+        
+    else:
+        return html
+
+@app.route("/motor", methods=['GET', 'POST'])
+def motor():
+    html = """
+    <html>
+    <head>
+        <style>
+            p {
+                color: #f5b81d;
+                font-size: 18px;
+            }
+        </style>
+    </head>
+    <body>
+        <p>Put motor on or off.</p>
+    </body>
+    </html>
+    """
+    if request.method == 'POST':
+        content = request.get_json()
+        if(content.motor == 'on'):
+            GPIO.output(MOTOR, GPIO.HIGH)
+        elif(content.motor == 'off'):
+            GPIO.output(MOTOR, GPIO.LOW)
+    else:
+        return html
+
+
+@app.route("/eyes", methods=['GET', 'POST'])
+def choosing_eyes_colors():
+    html = """
+    <html>
+    <head>
+        <style>
+            p {
+                color: #f5b81d;
+                font-size: 18px;
+            }
+        </style>
+    </head>
+    <body>
+        <p>Knock knock.</p>
+        <p>Who's there? </p>
+        <p>Art</p>
+        <p>Art who?</p>
+        <p>R2D2</p>
+    </body>
+    </html>
+    """
+    if request.method == 'POST':
+        content = request.get_json()
+        left_color = content.left
+        right_color = content.right
+        # Parse hex color strings to integers
+        left_red = int(left_color[0:2], 16)
+        left_green = int(left_color[2:4], 16)
+        left_blue = int(left_color[4:6], 16)
+        right_red = int(right_color[0:2], 16)
+        right_green = int(right_color[2:4], 16) 
+        right_blue = int(right_color[4:6], 16)
+
+        # Normalize RGB values to 0-100 range
+        left_red_normalized = (left_red / 255.0) * 100
+        left_green_normalized = (left_green / 255.0) * 100
+        left_blue_normalized = (left_blue / 255.0) * 100
+        right_red_normalized = (right_red / 255.0) * 100
+        right_green_normalized = (right_green / 255.0) * 100
+        right_blue_normalized = (right_blue / 255.0) * 100
+
+        # Set PWM duty cycle for left eye
+        left_red_pwm.ChangeDutyCycle(left_red_normalized)
+        left_green_pwm.ChangeDutyCycle(left_green_normalized)
+        left_blue_pwm.ChangeDutyCycle(left_blue_normalized)
+
+        # Set PWM duty cycle for right eye
+        right_red_pwm.ChangeDutyCycle(right_red_normalized)
+        right_green_pwm.ChangeDutyCycle(right_green_normalized)
+        right_blue_pwm.ChangeDutyCycle(right_blue_normalized)
+
+    else:
+        return html
 
 
 @app.route("/")
