@@ -61,6 +61,7 @@ def talk():
     </head>
     <body>
         <p>Make me speak</p>
+        <p>What should I do?</p>
     </body>
     </html>
     """
