@@ -1,9 +1,19 @@
 import time
 import re
 import RPi.GPIO as GPIO
-from flask import Flask, request
+from flask import Flask, request, jsonify, make_response
 import pyttsx3
 
+def _build_cors_preflight_response():
+    response = make_response()
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    response.headers.add('Access-Control-Allow-Headers', "*")
+    response.headers.add('Access-Control-Allow-Methods', "*")
+    return response
+
+def _corsify_actual_response(response):
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    return response
 
 def shutDown():
     GPIO.cleanup()
@@ -47,7 +57,7 @@ GPIO.setup(MOTOR, GPIO.OUT)
 
 app = Flask(__name__)
 
-@app.route("/talk", methods=['GET', 'POST'])
+@app.route("/talk", methods=['GET', 'POST', 'OPTIONS'])
 def talk():
     html = """
     <html>
@@ -61,17 +71,18 @@ def talk():
     </head>
     <body>
         <p>Make me speak</p>
-        <p>What should I do?</p>
     </body>
     </html>
     """
+    if request.method == "OPTIONS": # CORS preflight
+        return _build_cors_preflight_response()
     if request.method == 'POST':
         content = request.get_json()
         text = content["text"]
         engine = pyttsx3.init()
         engine.say(text)
         engine.runAndWait()
-        return "done"
+        return _corsify_actual_response(jsonify({}))
     else:
         return html
 
@@ -92,18 +103,20 @@ def motor():
     </body>
     </html>
     """
+    if request.method == "OPTIONS": # CORS preflight
+        return _build_cors_preflight_response()
     if request.method == 'POST':
         content = request.get_json()
         if(content["motor"] == 'on'):
             GPIO.output(MOTOR, GPIO.HIGH)
         elif(content["motor"] == 'off'):
             GPIO.output(MOTOR, GPIO.LOW)
-        return ""
+        return _corsify_actual_response(jsonify({}))
     else:
         return html
 
 
-@app.route("/eyes", methods=['GET', 'POST'])
+@app.route("/eyes", methods=['GET', 'POST', 'OPTIONS'])
 def choosing_eyes_colors():
     html = """
     <html>
@@ -124,6 +137,8 @@ def choosing_eyes_colors():
     </body>
     </html>
     """
+    if request.method == "OPTIONS": # CORS preflight
+        return _build_cors_preflight_response()
     if request.method == 'POST':
         content = request.get_json()
         left_color = content["left"]
@@ -133,7 +148,7 @@ def choosing_eyes_colors():
         left_green = int(left_color[2:4], 16)
         left_blue = int(left_color[4:6], 16)
         right_red = int(right_color[0:2], 16)
-        right_green = int(right_color[2:4], 16) 
+        right_green = int(right_color[2:4], 16)
         right_blue = int(right_color[4:6], 16)
 
         # Normalize RGB values to 0-100 range
@@ -154,7 +169,7 @@ def choosing_eyes_colors():
         right_green_pwm.ChangeDutyCycle(right_green_normalized)
         right_blue_pwm.ChangeDutyCycle(right_blue_normalized)
 
-        return ""
+        return _corsify_actual_response(jsonify({}))
 
     else:
         return html
