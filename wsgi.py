@@ -1,8 +1,13 @@
 import time
-import re
-import RPi.GPIO as GPIO
+# import RPi.GPIO as GPIO
 from flask import Flask, request, jsonify, make_response
-import pyttsx3
+import os
+import openai
+from dotenv import load_dotenv
+import json
+import requests
+import simpleaudio as sa
+load_dotenv()
 
 def _build_cors_preflight_response():
     response = make_response()
@@ -18,6 +23,35 @@ def _corsify_actual_response(response):
 def shutDown():
     GPIO.cleanup()
 
+def chat_completion(text):
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {os.getenv('OPENAI_API_KEY')}"
+    }
+
+    data = {
+     "model": "gpt-3.5-turbo",
+     "messages": [{"role": "user", "content": text}],
+     "temperature": 0.7
+   }
+    
+    response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=data)
+    result = response.json()
+
+    return result['choices'][0]['message']['content']
+
+def get_sound(text):
+    headers = {
+        "Content-Type": "application/json",
+    }
+    data = {"robo": text}
+    response = requests.post("http://192.168.110.128:5000/speak", headers=headers, json=data)
+    with open("movie.wav", "wb") as f:
+        f.write(response.content)
+    filename = "movie.wav"
+    wave_obj = sa.WaveObject.from_wave_file(filename)
+    play_obj = wave_obj.play()
+    play_obj.wait_done()  # Wait until sound has finished playing
 
 # EYES
 EYE_L_R = 22
@@ -27,33 +61,33 @@ EYE_R_R = 23
 EYE_R_G = 24
 EYE_R_B = 25
 
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(EYE_L_R, GPIO.OUT)
-GPIO.setup(EYE_L_G, GPIO.OUT)
-GPIO.setup(EYE_L_B, GPIO.OUT)
-GPIO.setup(EYE_R_R, GPIO.OUT)
-GPIO.setup(EYE_R_G, GPIO.OUT)
-GPIO.setup(EYE_R_B, GPIO.OUT)
+# GPIO.setmode(GPIO.BCM)
+# GPIO.setup(EYE_L_R, GPIO.OUT)
+# GPIO.setup(EYE_L_G, GPIO.OUT)
+# GPIO.setup(EYE_L_B, GPIO.OUT)
+# GPIO.setup(EYE_R_R, GPIO.OUT)
+# GPIO.setup(EYE_R_G, GPIO.OUT)
+# GPIO.setup(EYE_R_B, GPIO.OUT)
 
-left_red_pwm = GPIO.PWM(EYE_L_R, 1000)
-left_green_pwm = GPIO.PWM(EYE_L_G, 1000)
-left_blue_pwm = GPIO.PWM(EYE_L_B, 1000)
-right_red_pwm = GPIO.PWM(EYE_R_R, 1000)
-right_green_pwm = GPIO.PWM(EYE_R_G, 1000)
-right_blue_pwm = GPIO.PWM(EYE_R_B, 1000)
+# left_red_pwm = GPIO.PWM(EYE_L_R, 1000)
+# left_green_pwm = GPIO.PWM(EYE_L_G, 1000)
+# left_blue_pwm = GPIO.PWM(EYE_L_B, 1000)
+# right_red_pwm = GPIO.PWM(EYE_R_R, 1000)
+# right_green_pwm = GPIO.PWM(EYE_R_G, 1000)
+# right_blue_pwm = GPIO.PWM(EYE_R_B, 1000)
 
-left_red_pwm.start(0)
-left_green_pwm.start(0)
-left_blue_pwm.start(0)
-right_red_pwm.start(0)
-right_green_pwm.start(0)
-right_blue_pwm.start(0)
+# left_red_pwm.start(0)
+# left_green_pwm.start(0)
+# left_blue_pwm.start(0)
+# right_red_pwm.start(0)
+# right_green_pwm.start(0)
+# right_blue_pwm.start(0)
 
 # MOTOR
 
 MOTOR = 26
 
-GPIO.setup(MOTOR, GPIO.OUT)
+# GPIO.setup(MOTOR, GPIO.OUT)
 
 app = Flask(__name__)
 
@@ -79,9 +113,8 @@ def talk():
     if request.method == 'POST':
         content = request.get_json()
         text = content["text"]
-        engine = pyttsx3.init()
-        engine.say(text)
-        engine.runAndWait()
+        answer = chat_completion(text)
+        get_sound(answer)
         return _corsify_actual_response(jsonify({}))
     else:
         return html
