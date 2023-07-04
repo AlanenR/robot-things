@@ -1,5 +1,5 @@
 import time
-# import RPi.GPIO as GPIO
+import RPi.GPIO as GPIO
 from flask import Flask, request, jsonify, make_response
 import os
 import openai
@@ -65,40 +65,39 @@ EYE_R_R = 23
 EYE_R_G = 24
 EYE_R_B = 25
 
-# GPIO.setmode(GPIO.BCM)
-# GPIO.setup(EYE_L_R, GPIO.OUT)
-# GPIO.setup(EYE_L_G, GPIO.OUT)
-# GPIO.setup(EYE_L_B, GPIO.OUT)
-# GPIO.setup(EYE_R_R, GPIO.OUT)
-# GPIO.setup(EYE_R_G, GPIO.OUT)
-# GPIO.setup(EYE_R_B, GPIO.OUT)
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(EYE_L_R, GPIO.OUT)
+GPIO.setup(EYE_L_G, GPIO.OUT)
+GPIO.setup(EYE_L_B, GPIO.OUT)
+GPIO.setup(EYE_R_R, GPIO.OUT)
+GPIO.setup(EYE_R_G, GPIO.OUT)
+GPIO.setup(EYE_R_B, GPIO.OUT)
 
-# left_red_pwm = GPIO.PWM(EYE_L_R, 1000)
-# left_green_pwm = GPIO.PWM(EYE_L_G, 1000)
-# left_blue_pwm = GPIO.PWM(EYE_L_B, 1000)
-# right_red_pwm = GPIO.PWM(EYE_R_R, 1000)
-# right_green_pwm = GPIO.PWM(EYE_R_G, 1000)
-# right_blue_pwm = GPIO.PWM(EYE_R_B, 1000)
+left_red_pwm = GPIO.PWM(EYE_L_R, 1000)
+left_green_pwm = GPIO.PWM(EYE_L_G, 1000)
+left_blue_pwm = GPIO.PWM(EYE_L_B, 1000)
+right_red_pwm = GPIO.PWM(EYE_R_R, 1000)
+right_green_pwm = GPIO.PWM(EYE_R_G, 1000)
+right_blue_pwm = GPIO.PWM(EYE_R_B, 1000)
 
-# left_red_pwm.start(0)
-# left_green_pwm.start(0)
-# left_blue_pwm.start(0)
-# right_red_pwm.start(0)
-# right_green_pwm.start(0)
-# right_blue_pwm.start(0)
+left_red_pwm.start(0)
+left_green_pwm.start(0)
+left_blue_pwm.start(0)
+right_red_pwm.start(0)
+right_green_pwm.start(0)
+right_blue_pwm.start(0)
 
 # MOTOR
 
 MOTOR = 26
 
-# GPIO.setup(MOTOR, GPIO.OUT)
+GPIO.setup(MOTOR, GPIO.OUT)
 
 app = Flask(__name__)
 
-@app.route("/mic")
 def speak():
     fs = 44100  # this is the frequency sampling; also: 4999, 64000
-    seconds = 5  # Duration of recording
+    seconds = 10  # Duration of recording
     url = os.getenv('TT_API') # Api url
     myrecording = sd.rec(int(seconds * fs), samplerate=fs, channels=1)
     print("Starting: Speak now!")
@@ -115,8 +114,45 @@ def speak():
     response = requests.post(url, files=files)
     content = response.json()
     text = content["results"][0]["transcript"]
+    text += '. Give me a short answer.'
     answer = chat_completion(text)
+    setEyeColor('cc34eb', '13b042')
+    GPIO.output(MOTOR, GPIO.HIGH)
     get_sound(answer)
+    setEyeColor('000000', '000000')
+    GPIO.output(MOTOR, GPIO.LOW)
+    speak()
+
+def setEyeColor(left_color, right_color):
+    # Parse hex color strings to integers
+        left_red = int(left_color[0:2], 16)
+        left_green = int(left_color[2:4], 16)
+        left_blue = int(left_color[4:6], 16)
+        right_red = int(right_color[0:2], 16)
+        right_green = int(right_color[2:4], 16)
+        right_blue = int(right_color[4:6], 16)
+
+        # Normalize RGB values to 0-100 range
+        left_red_normalized = (left_red / 255.0) * 100
+        left_green_normalized = (left_green / 255.0) * 100
+        left_blue_normalized = (left_blue / 255.0) * 100
+        right_red_normalized = (right_red / 255.0) * 100
+        right_green_normalized = (right_green / 255.0) * 100
+        right_blue_normalized = (right_blue / 255.0) * 100
+
+        # Set PWM duty cycle for left eye
+        left_red_pwm.ChangeDutyCycle(left_red_normalized)
+        left_green_pwm.ChangeDutyCycle(left_green_normalized)
+        left_blue_pwm.ChangeDutyCycle(left_blue_normalized)
+
+        # Set PWM duty cycle for right eye
+        right_red_pwm.ChangeDutyCycle(right_red_normalized)
+        right_green_pwm.ChangeDutyCycle(right_green_normalized)
+        right_blue_pwm.ChangeDutyCycle(right_blue_normalized)
+
+@app.route("/mic")
+def loopTalk():
+    speak()
 
     html = """
     <html>
