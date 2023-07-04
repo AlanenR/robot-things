@@ -7,7 +7,11 @@ from dotenv import load_dotenv
 import json
 import requests
 import simpleaudio as sa
+import sounddevice as sd
+from scipy.io.wavfile import write
+from pydub import AudioSegment
 load_dotenv()
+
 
 def _build_cors_preflight_response():
     response = make_response()
@@ -90,6 +94,47 @@ MOTOR = 26
 # GPIO.setup(MOTOR, GPIO.OUT)
 
 app = Flask(__name__)
+
+@app.route("/mic")
+def speak():
+    fs = 44100  # this is the frequency sampling; also: 4999, 64000
+    seconds = 5  # Duration of recording
+    url = os.getenv('TT_API') # Api url
+    myrecording = sd.rec(int(seconds * fs), samplerate=fs, channels=1)
+    print("Starting: Speak now!")
+    sd.wait()  # Wait until recording is finished
+    print("finished")
+    write('output.wav', fs, myrecording)  # Save as WAV file
+    
+    # Convert to mp3
+    sound = AudioSegment.from_wav('output.wav')
+    sound.export('robot_voice.mp3', format='mp3')
+
+    # Send to API
+    files = {'file': open('robot_voice.mp3', 'rb')}
+    response = requests.post(url, files=files)
+    content = response.json()
+    text = content["results"][0]["transcript"]
+    answer = chat_completion(text)
+    get_sound(answer)
+
+    html = """
+    <html>
+    <head>
+        <style>
+            p {
+                color: #f5b81d;
+                font-size: 18px;
+            }
+        </style>
+    </head>
+    <body>
+        <p>Ny jutellaa</p>
+    </body>
+    </html>
+    """
+
+    return html
 
 @app.route("/talk", methods=['GET', 'POST', 'OPTIONS'])
 def talk():
